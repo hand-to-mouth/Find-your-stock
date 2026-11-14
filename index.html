@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>산업연관표 연관산업 탐색기 | 2023 산업연관표 × 국내 주식시장</title>
+<meta name="description" content="2023년 산업연관표(생산자가격) 국산 생산유발계수로 한 산업의 후방연쇄·전방연쇄 연관산업을 찾고, 각 산업의 대표 상장사를 확인하는 웹앱입니다.">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <p class="eyebrow">2023년 산업연관표 · 생산자가격 · 국산 생산유발계수</p>
+    <h1>산업연관표 연관산업 탐색기</h1>
+    <p class="lede">
+      한 산업을 고르면 <strong>후방연쇄</strong>(그 산업이 커질 때 함께 생산이 늘어나는 산업)와
+      <strong>전방연쇄</strong>(그 산업의 산출물을 중간재로 쓰는 산업)를 나란히 보여주고,
+      선택한 산업에 대응하는 <strong>대표 상장사</strong>를 연결합니다.
+    </p>
+    <nav class="toc" aria-label="차례">
+      <a href="#load">1 자료 불러오기</a>
+      <a href="#explore">2 원자료 탐색</a>
+      <a href="#analysis">3 연관산업 분석</a>
+      <a href="#companies-anchor">4 대표기업</a>
+      <a href="#guide">읽는 방법</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+
+  <!-- STEP 1 ───────────────────────────────────────────── -->
+  <section id="load" class="card" aria-labelledby="load-title">
+    <div class="section-head">
+      <p class="step">STEP 1</p>
+      <h2 id="load-title">자료 불러오기</h2>
+    </div>
+    <p class="desc">
+      산업연관표 Excel 파일은 <strong>버튼을 눌렀을 때</strong> 내려받아 브라우저에서 직접 읽습니다.
+      서버 없이 동작하므로 GitHub Pages에서도 그대로 실행됩니다.
+    </p>
+
+    <!-- 이름으로 찾기: 어느 분류 단위에 속하는지 모를 때 -->
+    <div class="finder" id="finder">
+      <p class="finder-label">
+        분류 단위를 모르겠으면
+        <span class="hint-inline">(산업 이름을 찾으면 몇 분류인지 알려주고, 그 자료를 자동으로 불러옵니다)</span>
+      </p>
+      <label class="field">
+        <span>산업 이름 검색</span>
+        <input id="finder-search" type="search" placeholder="예: 자동차, 반도체, 철강" autocomplete="off" disabled>
+      </label>
+      <p id="finder-note" class="note note-tight">분류표를 읽는 중입니다.</p>
+      <ul id="finder-results" class="finder-results" hidden aria-label="검색 결과"></ul>
+    </div>
+
+    <div class="unit-block">
+      <p class="unit-label" id="unit-label">분류 단위 <span class="hint-inline">(4종 · 단위마다 다른 파일)</span></p>
+      <div id="unit-switch" class="unit-switch" role="group" aria-labelledby="unit-label">
+        <button type="button" class="unit-btn" data-unit="large" disabled>
+          <span class="unit-name">대분류</span><span class="unit-count">33</span>
+        </button>
+        <button type="button" class="unit-btn" data-unit="medium" disabled>
+          <span class="unit-name">중분류</span><span class="unit-count">83</span>
+        </button>
+        <button type="button" class="unit-btn" data-unit="small" disabled>
+          <span class="unit-name">소분류</span><span class="unit-count">165</span>
+        </button>
+        <button type="button" class="unit-btn" data-unit="basic" disabled>
+          <span class="unit-name">기본부문</span><span class="unit-count">380</span>
+        </button>
+      </div>
+      <p class="unit-hint" id="unit-hint">단위를 고르면 그 단위의 파일을 새로 내려받습니다. 기본부문(380부문)은 파일이 커서 시간이 걸립니다.</p>
+    </div>
+
+    <div class="load-row">
+      <button id="load-btn" class="btn btn-primary" type="button" disabled>자료 불러오기</button>
+      <p id="load-status" class="status" role="status" aria-live="polite">
+        분류 단위를 확인한 뒤 버튼을 누르면 그 단위의 산업연관표 파일을 내려받아 읽습니다.
+      </p>
+    </div>
+    <dl class="meta-list" id="dataset-meta" hidden></dl>
+    <details id="validation-box" class="validation" hidden>
+      <summary>계수 검증 결과 보기</summary>
+      <div id="validation-body"></div>
+    </details>
+  </section>
+
+  <!-- STEP 2 ───────────────────────────────────────────── -->
+  <section id="explore" class="card is-locked" aria-labelledby="explore-title">
+    <div class="section-head">
+      <p class="step">STEP 2</p>
+      <h2 id="explore-title">원자료 탐색</h2>
+    </div>
+    <p class="desc">
+      투입산출표 한 파일에는 <strong>12개 시트</strong>가 들어 있고, 시트마다 담긴 내용이 다릅니다.
+      이 단계는 <strong>분석에 쓰인 값의 근거를 직접 확인하는 용도</strong>입니다.
+      STEP 3의 연관산업 분석은 아래 목록에서 무엇을 고르든
+      <strong>「생산유발계수」 시트를 자동으로 사용</strong>하므로, 시트를 선택하지 않아도 결과에는 영향이 없습니다.
+    </p>
+
+    <div class="explore-grid">
+      <div>
+        <h3 class="sub-title">시트 목록 <span class="hint-inline">(묶음 · 단위)</span></h3>
+        <ul id="sheet-list" class="sheet-list" aria-label="시트 목록"></ul>
+        <p class="note note-tight">
+          <strong>거래표</strong> = 실제로 오간 금액,
+          <strong>투입계수</strong> = 생산 1단위당 투입 비율,
+          <strong>유발계수</strong> = 최종수요 1단위당 파급효과,
+          <strong>항목별 유발액</strong> = 소비·수출 등 항목별 실적.
+        </p>
+      </div>
+      <div>
+        <h3 class="sub-title">시트 미리보기</h3>
+        <div class="field-row">
+          <label class="field">
+            <span>선택한 시트</span>
+            <output id="sheet-current" class="field-value">—</output>
+          </label>
+          <label class="field">
+            <span>행 검색</span>
+            <input id="sheet-search" type="search" placeholder="예: 화학, C05, 부가가치" disabled
+                   autocomplete="off">
+          </label>
+        </div>
+        <p id="sheet-note" class="note">시트를 선택하면 표가 표시됩니다.</p>
+        <div class="table-scroll">
+          <table id="sheet-table" class="data-table">
+            <caption id="sheet-caption">미리보기</caption>
+            <thead id="sheet-thead"></thead>
+            <tbody id="sheet-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3 ───────────────────────────────────────────── -->
+  <section id="analysis" class="card is-locked" aria-labelledby="analysis-title">
+    <div class="section-head">
+      <p class="step">STEP 3</p>
+      <h2 id="analysis-title">연관산업 분석</h2>
+    </div>
+    <p class="desc">
+      분석할 산업을 고르면 <strong>① 후방연쇄</strong>와 <strong>② 전방연쇄</strong> 두 트랙으로
+      상위 연관산업 5개를 각각 보여줍니다. 자기 자신은 계수가 가장 크게 나오므로 목록에서 제외했습니다.
+      각 항목에는 <strong>계수</strong>와 함께 <strong>비중</strong>, <strong>누적 비중</strong>을 표시합니다.
+    </p>
+
+    <div class="picker">
+      <label class="field field-wide">
+        <span>산업 검색</span>
+        <input id="sector-search" type="search" placeholder="산업 이름 또는 코드 (예: 화학, C05)" disabled
+               autocomplete="off">
+      </label>
+      <label class="field field-wide">
+        <span>산업 선택</span>
+        <select id="sector-select" disabled></select>
+      </label>
+      <p id="picker-note" class="note">자료를 불러오면 선택할 수 있습니다.</p>
+    </div>
+
+    <div id="result" hidden>
+      <div class="result-head">
+        <h3 class="result-title">
+          <span id="result-code" class="code-chip"></span>
+          <span id="result-name"></span>
+        </h3>
+        <p class="result-sub" id="result-sub"></p>
+      </div>
+
+      <div class="metric-cards" id="metric-cards"></div>
+
+      <div class="tracks">
+        <article class="track track-back" aria-labelledby="track-back-title">
+          <header class="track-head">
+            <p class="track-tag">① 후방연쇄 · 영향력</p>
+            <h3 id="track-back-title">함께 생산이 늘어나는 산업</h3>
+            <p class="track-desc">
+              선택 산업에 최종수요가 1단위 생길 때, 생산이 많이 늘어나는 순서입니다.
+              원료·부품·전력을 공급하는 쪽이 위에 옵니다.
+            </p>
+            <p class="legend">
+              <span><b>계수</b> 최종수요 1단위당 생산 증가</span>
+              <span><b>비중</b> 자기 제외 파급 중 몫</span>
+              <span><b>누적</b> 1위부터 합계</span>
+            </p>
+          </header>
+          <ol id="track-back-list" class="rank-list"></ol>
+          <p id="track-back-sum" class="track-sum"></p>
+        </article>
+
+        <article class="track track-fwd" aria-labelledby="track-fwd-title">
+          <header class="track-head">
+            <p class="track-tag">② 전방연쇄 · 감응도</p>
+            <h3 id="track-fwd-title">산출물을 받아 쓰는 산업</h3>
+            <p class="track-desc">
+              다른 산업의 최종수요 1단위가 발생할 때, 선택 산업의 생산을 얼마나 필요로 하는지의 순서입니다.
+              중간재를 사다 쓰는 쪽이 위에 옵니다.
+            </p>
+            <p class="legend">
+              <span><b>계수</b> 최종수요 1단위당 생산 증가</span>
+              <span><b>비중</b> 자기 제외 파급 중 몫</span>
+              <span><b>누적</b> 1위부터 합계</span>
+            </p>
+          </header>
+          <ol id="track-fwd-list" class="rank-list"></ol>
+          <p id="track-fwd-sum" class="track-sum"></p>
+        </article>
+      </div>
+
+      <p class="analysis-footnote">
+        <strong>비중·누적의 기준</strong> — 선택 산업 자신을 뺀 나머지
+        <span id="fn-count">32</span>개 산업으로 흘러간 파급의 합을 100%로 계산했습니다.
+        자기 자신(대각값)은 정의상 1.0을 넘어 절반 이상을 차지하므로 분모에서 제외했습니다.
+      </p>
+
+      <div class="row-actions">
+        <button id="goto-raw" class="btn btn-ghost" type="button">이 산업을 원자료에서 보기 (STEP 2)</button>
+      </div>
+    </div>
+
+    <!-- 드릴다운: 상위 분류 → 하위 분류 (그룹 평균 집계) -->
+    <section id="drill" class="drill" hidden aria-labelledby="drill-title">
+      <div class="drill-head">
+        <div>
+          <p class="step">DRILL DOWN</p>
+          <h3 id="drill-title">하위 분류로 내려보기</h3>
+        </div>
+        <p id="drill-path" class="drill-path"></p>
+      </div>
+      <p id="drill-lead" class="drill-lead"></p>
+
+      <div class="row-actions">
+        <button id="drill-run" class="btn btn-primary" type="button">하위 분류 집계하기</button>
+        <button id="drill-close" class="btn btn-ghost" type="button">접기</button>
+      </div>
+      <p id="drill-status" class="status" role="status" aria-live="polite"></p>
+
+      <div id="drill-body" hidden>
+        <p class="drill-note">
+          <strong>집계 방법</strong> — 이 분류에 속한 <span id="drill-k">n</span>개 부문의 계수를
+          <strong>합계가 아니라 평균</strong>으로 냈습니다. 자식 수가 많은 분류가 자동으로 커지는 것을 막기 위해서입니다.
+        </p>
+        <div class="tracks">
+          <article class="track track-back">
+            <header class="track-head">
+              <p class="track-tag">① 후방연쇄 · 그룹 외부</p>
+              <h4 class="track-h4">이 그룹이 커질 때 함께 늘어나는 산업</h4>
+              <p class="legend">
+                <span><b>계수</b> 그룹 평균</span>
+                <span><b>비중</b> 그룹 외부 파급 중 몫</span>
+                <span><b>누적</b> 1위부터 합계</span>
+              </p>
+            </header>
+            <ol id="drill-back-list" class="rank-list"></ol>
+            <p id="drill-back-sum" class="track-sum"></p>
+          </article>
+
+          <article class="track track-fwd">
+            <header class="track-head">
+              <p class="track-tag">② 전방연쇄 · 그룹 외부</p>
+              <h4 class="track-h4">이 그룹의 산출물을 받아 쓰는 산업</h4>
+              <p class="legend">
+                <span><b>계수</b> 그룹 평균</span>
+                <span><b>비중</b> 그룹 외부 파급 중 몫</span>
+                <span><b>누적</b> 1위부터 합계</span>
+              </p>
+            </header>
+            <ol id="drill-fwd-list" class="rank-list"></ol>
+            <p id="drill-fwd-sum" class="track-sum"></p>
+          </article>
+        </div>
+
+        <div class="drill-internal">
+          <h4 class="sub-title">그룹 내부 연쇄 <span class="hint-inline">(같은 분류 안에서 오간 파급)</span></h4>
+
+          <p id="drill-internal-lead" class="drill-note"></p>
+
+          <!-- 두 가지 지표를 나란히: 자기 자신 포함 / 자기 자신 제외 -->
+          <div class="metric-cards metric-cards-2">
+            <article class="metric metric-a">
+              <p class="metric-label">
+                내부 비중
+                <span class="metric-sub">자기 자신 포함</span>
+              </p>
+              <p class="metric-value" id="drill-m-internal">—</p>
+              <p class="metric-band" id="drill-m-internal-band">—</p>
+              <div class="metric-bar" id="drill-m-bar" aria-hidden="true">
+                <span class="bar-seg bar-diag" id="bar-diag"></span>
+                <span class="bar-seg bar-off" id="bar-off"></span>
+                <span class="bar-seg bar-ext" id="bar-ext"></span>
+              </div>
+              <p class="metric-legend" id="drill-m-legend">—</p>
+            </article>
+
+            <article class="metric metric-b">
+              <p class="metric-label with-help">
+                타 부문 거래 비중
+                <span class="metric-sub">자기 자신 제외</span>
+                <button type="button" class="help-dot" id="drill-help-open"
+                        aria-label="타 부문 거래 비중 설명 보기" aria-controls="drill-help">?</button>
+              </p>
+              <p class="metric-value" id="drill-m-off">—</p>
+              <p class="metric-band" id="drill-m-off-band">—</p>
+              <p class="metric-note" id="drill-m-off-note">—</p>
+            </article>
+          </div>
+
+          <p id="drill-verdict" class="drill-verdict" role="status" aria-live="polite"></p>
+
+          <!-- 종목 탐색 관점의 해석 -->
+          <div class="drill-read">
+            <p class="drill-read-title">이 수치를 종목 탐색에 어떻게 쓸까</p>
+            <p id="drill-purpose"></p>
+          </div>
+
+          <!-- 상세 설명: 항상 보이는 판정문을 보완하는 참고 자료 -->
+          <details class="drill-help" id="drill-help">
+            <summary>이 수치가 정확히 무엇인지 · 기준선은 어떻게 잡았는지</summary>
+
+            <div class="help-body">
+              <h5>1. 무엇을 계산했나</h5>
+              <p>
+                이 분류에 속한 <span id="help-k">n</span>개 부문을 한 묶음으로 보고, 그룹 전체 파급을
+                <strong>세 갈래</strong>로 나눴습니다. 부문 <code>m</code>의 계수를 세로로 더한 값을
+                <code>k</code>(부문 수)로 나눈 것이 <strong>내부 기여</strong>이고,
+                그 안에서 <code>b(m, m)</code>이 <strong>자기 자신</strong>,
+                나머지가 <strong>타 부문 거래</strong>입니다.
+              </p>
+              <ul class="dot-list">
+                <li><strong>자기 자신</strong> — <code>b(m, m) / k</code>. 이 부문에 수요가 생길 때 그 부문 자신의 생산이 늘어나는 몫입니다.</li>
+                <li><strong>타 부문 거래</strong> — 같은 그룹의 <em>다른</em> 부문에 공급해서 생기는 파급입니다.</li>
+                <li><strong>그룹 외부</strong> — 그룹 밖 산업으로 나간 파급입니다. 위의 ①후방·②전방 목록이 이것입니다.</li>
+              </ul>
+              <p>
+                세 갈래를 더하면 그룹 전체 파급이 되고, 이것은 구성 부문들의 열합 평균과 정확히 같아야 합니다.
+                화면 위 <strong>교차검증 잔차</strong>가 그 차이이며, 사실상 0으로 나옵니다.
+              </p>
+
+              <h5>2. 왜 자기 자신을 따로 떼어내나</h5>
+              <p>
+                생산유발계수의 대각값 <code>b(m, m)</code>은 정의상 <strong>거의 항상 1.0을 넘습니다.</strong>
+                그래서 그룹 내부 합계를 그냥 보면 <strong>89~99%가 자기 자신</strong>이 차지합니다.
+                실제로 이 화면에서도 비철금속 1차제품 그룹은 내부 합의 <strong>99.4%</strong>가 대각값이었습니다.
+              </p>
+              <p>
+                즉 <strong>내부 비중만 보면</strong> "부문들이 서로 많이 사고판다"와
+                "각자 자기 생산분 1.0만 갖고 있다"가 <strong>구별되지 않습니다.</strong>
+                두 경우 모두 숫자가 55% 근처로 나옵니다. 그래서 자기 자신을 뺀
+                <strong>타 부문 거래 비중</strong>을 함께 보여줍니다.
+              </p>
+
+              <h5>3. 기준선(구간)은 어떻게 잡았나</h5>
+              <p>
+                절대 기준이 아니라 <strong>이 자료 안에서의 상대 위치</strong>입니다.
+                2023년 연장표에서 만들 수 있는 그룹 <strong>281개</strong>
+                (대분류→중분류 33 · 중분류→소분류 83 · 소분류→기본부문 165)를 모두 계산해
+                분포를 낸 뒤, 사분위수를 경계로 삼았습니다.
+              </p>
+              <div class="table-scroll table-scroll-short">
+                <table class="data-table compact">
+                  <caption>실측 분포 (281개 그룹)</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">지표</th>
+                      <th scope="col">하위 25%</th>
+                      <th scope="col">중앙값</th>
+                      <th scope="col">상위 25%</th>
+                      <th scope="col">상위 10%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">내부 비중 (자기 포함)</th>
+                      <td class="num">48.7%</td><td class="num">55.3%</td>
+                      <td class="num">62.2%</td><td class="num">69.6%</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">타 부문 거래 비중</th>
+                      <td class="num">0.00%</td><td class="num">0.05%</td>
+                      <td class="num">0.78%</td><td class="num">2.75%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="help-caveat">
+                <strong>절대 기준이 아닙니다.</strong> 분류 단위(대·중·소·기본)와 그룹 묶는 방식에 따라
+                값이 달라지고, 2023년 연장표 한 해의 구조일 뿐입니다. 같은 업종이라도 기준년이나
+                분류 개정이 바뀌면 달라질 수 있으므로, <strong>산업 간 순위를 비교하는 용도</strong>로만
+                쓰시고 "<em>이 값 이상이면 반드시 좋다</em>" 같은 판정에는 쓰지 마세요.
+              </p>
+
+              <h5>3-1. 타 부문 거래가 유난히 작게 보이는 이유</h5>
+              <p>
+                타 부문 거래는 대부분 <strong>1% 미만</strong>입니다. 이는 계산 오류가 아니라
+                생산유발계수의 성질입니다. 최종수요 1단위가 들어올 때 <strong>자기 자신의 생산 1.0</strong>이
+                가장 크고, 그다음이 직접 투입 관계인데 그 값은 0.1 안팎입니다.
+                여기에 <code>1/k</code>로 평균까지 내므로 작아질 수밖에 없습니다.
+                그래서 <strong>0.5%도 의미 있는 값</strong>으로 보셔야 하고, 이 지표는
+                <strong>"절대 크기"보다 "그룹끼리의 상대 비교"</strong>로 읽는 것이 맞습니다.
+              </p>
+            </div>
+          </details>
+
+          <div class="table-scroll table-scroll-short">
+            <table class="data-table" id="drill-internal-table">
+              <caption id="drill-internal-caption">그룹 내부</caption>
+              <thead>
+                <tr>
+                  <th scope="col">부문</th>
+                  <th scope="col">계수</th>
+                  <th scope="col">내부 비중</th>
+                  <th scope="col">균등 기준선</th>
+                  <th scope="col">타 부문 거래</th>
+                </tr>
+              </thead>
+              <tbody id="drill-internal-body"></tbody>
+            </table>
+          </div>
+          <p class="table-foot" id="drill-internal-foot"></p>
+        </div>
+
+        <p class="analysis-footnote">
+          <strong>분모 정의</strong> — ①후방·②전방의 비중과 누적 비중은 <strong>그룹 외부로 나간 파급의 합</strong>을
+          100%로 계산했습니다. 그룹 내부 연쇄는 정의상 값이 크게 나오므로 따로 표로 분리했고,
+          그 내부를 다시 <strong>자기 자신 · 타 부문 거래</strong>로 나눠 표시했습니다.
+        </p>
+      </div>
+    </section>
+
+    <p id="analysis-note" class="note">자료를 불러오면 분석할 수 있습니다.</p>
+  </section>
+
+  <!-- STEP 4 ───────────────────────────────────────────── -->
+  <section id="companies-anchor" class="card is-locked" aria-labelledby="company-title">
+    <div class="section-head">
+      <p class="step">STEP 4</p>
+      <h2 id="company-title">대표기업</h2>
+    </div>
+    <p class="desc">
+      선택한 산업 부문의 주된 생산물과 사업 내용이 대응하는 상장사를 표시합니다.
+      <strong>시가총액 순위가 아닙니다.</strong> 종목코드는 공개 자료를 기준으로 기입했으며,
+      투자 판단의 근거로 사용할 수 없습니다.
+    </p>
+    <p id="company-sector" class="note">산업을 선택하면 표시됩니다.</p>
+    <div class="table-scroll">
+      <table id="company-table" class="data-table" hidden>
+        <caption id="company-caption">대표기업</caption>
+        <thead>
+          <tr><th scope="col">종목명</th><th scope="col">종목코드</th><th scope="col">상장시장</th><th scope="col">비고</th></tr>
+        </thead>
+        <tbody id="company-tbody"></tbody>
+      </table>
+    </div>
+    <p id="company-empty" class="empty-state" hidden></p>
+  </section>
+
+  <!-- 해설 ───────────────────────────────────────────── -->
+  <section id="guide" class="card" aria-labelledby="guide-title">
+    <div class="section-head">
+      <p class="step">GUIDE</p>
+      <h2 id="guide-title">읽는 방법과 한계</h2>
+    </div>
+    <div class="guide-grid">
+      <div>
+        <h3 class="sub-title">계수의 뜻</h3>
+        <p>
+          생산유발계수 <code>b(i, j)</code>는 <strong>j산업에 최종수요 1단위</strong>가 생길 때
+          <strong>i산업의 생산이 몇 단위</strong> 늘어나는지를 뜻합니다. 이 표의 값은 국산 생산유발계수이므로
+          수입으로 새는 부분은 제외된 <strong>국내 생산 파급</strong>입니다.
+        </p>
+        <ul class="dot-list">
+          <li><strong>영향력계수</strong> = 열합 ÷ 전체 평균. 1보다 크면 평균보다 후방연쇄가 강합니다.</li>
+          <li><strong>감응도계수</strong> = 행합 ÷ 전체 평균. 1보다 크면 평균보다 전방연쇄가 강합니다.</li>
+          <li>계수는 <strong>발표값을 그대로 읽고</strong>, 코드로 다시 계산해 교차 검증합니다.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="sub-title">해석할 때 주의할 점</h3>
+        <ul class="dot-list">
+          <li>
+            계수는 <strong>생산액 기준 기술적 연관관계</strong>입니다. 주가는 이익·밸류에이션·수급에 반응하므로,
+            연관산업이라는 사실이 주가 동조를 보장하지 않습니다. 이 앱은 <strong>탐색 후보를 좁히는 도구</strong>입니다.
+          </li>
+          <li>계수는 생산액 기준이므로 <strong>산업 규모 차이</strong>가 반영됩니다. 작은 산업은 계수가 작게 나옵니다.</li>
+          <li>연장표(2023년)는 <strong>2020 기준년 분류</strong>를 사용하므로, 분류표와 부문 코드가 일치합니다.</li>
+          <li>대표기업 매핑은 <strong>1개 부문에 여러 상장사가 걸리는 경우</strong>가 많아 대표성 판단이 필요합니다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>
+      자료: 한국은행 경제통계시스템(ECOS) 산업연관표 2023년 연장표 · 생산자가격 ·
+      국산 생산유발계수 · 2020 기준년 상품분류
+    </p>
+    <p class="footer-fine">
+      본 페이지는 대학 과제물로 제작된 학습용 도구이며, 특정 종목의 매수·매도를 권유하지 않습니다.
+    </p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="./js/io.js"></script>
+<script src="./js/tree.js"></script>
+<script src="./js/app.js"></script>
+</body>
+</html>
