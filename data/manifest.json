@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "산업연관표 연관산업 탐색기",
+    "year": 2023,
+    "tableName": "2023년 연장표",
+    "price": "생산자가격",
+    "source": "한국은행 경제통계시스템(ECOS) 산업연관표 투입산출표",
+    "classification": "2020 기준년 상품분류(투입산출표)",
+    "moneyUnit": "백만원",
+    "coefficientUnit": "배(무차원)",
+    "note": "생산유발계수는 국산(국내) 생산유발계수를 사용하며, 수입유발은 포함하지 않습니다."
+  },
+  "datasets": [
+    {
+      "id": "large",
+      "label": "대분류",
+      "sectorCount": 33,
+      "file": "./data/io-2023-large.xlsx",
+      "sheet": "생산유발계수",
+      "originalFile": "(표)(2023연장)투입산출표_생산자가격_통합대분류.xlsx",
+      "sizeKB": 573,
+      "drillTo": "medium",
+      "enabled": true
+    },
+    {
+      "id": "medium",
+      "label": "중분류",
+      "sectorCount": 83,
+      "file": "./data/io-2023-medium.xlsx",
+      "sheet": "생산유발계수",
+      "originalFile": "(표)(2023연장)투입산출표_생산자가격_통합중분류.xlsx",
+      "sizeKB": 1187,
+      "drillTo": "small",
+      "enabled": true
+    },
+    {
+      "id": "small",
+      "label": "소분류",
+      "sectorCount": 165,
+      "file": "./data/io-2023-small.xlsx",
+      "sheet": "생산유발계수",
+      "originalFile": "(표)(2023연장)투입산출표_생산자가격_통합소분류.xlsx",
+      "sizeKB": 3089,
+      "drillTo": "basic",
+      "enabled": true
+    },
+    {
+      "id": "basic",
+      "label": "기본부문",
+      "sectorCount": 380,
+      "file": "./data/io-2023-basic.xlsx",
+      "sheet": "생산유발계수",
+      "originalFile": "(표)(2023연장)투입산출표_생산자가격_기본부문.xlsx",
+      "sizeKB": 12283,
+      "drillTo": null,
+      "enabled": true
+    }
+  ],
+  "sectorTree": {
+    "file": "./data/sector-tree.xlsx",
+    "sheet": "부문분류",
+    "firstDataRow": 4,
+    "originalFile": "(표)상품분류.xlsx",
+    "note": "대분류 33 · 중분류 83 · 소분류 165 · 기본부문 380의 계층 관계표. 드릴다운의 그룹 구성과 상위·하위 분류 이동에 사용합니다."
+  },
+  "companies": {
+    "file": "./data/companies.csv",
+    "note": "시가총액 순위가 아니라, 산업연관표 부문의 주된 생산물과 사업 내용이 대응하는 상장사를 '대표기업'으로 표기합니다. 종목코드는 공개 자료를 기준으로 기입했으며 투자 판단의 근거로 사용할 수 없습니다."
+  }
+}
